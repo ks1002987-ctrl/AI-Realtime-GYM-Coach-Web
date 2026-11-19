@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI GYM Trainer - Live</title>
+<style>
+body{margin:0;background:#0a0a0a;color:white;font-family:Arial;text-align:center}
+h1{color:#00ff88}
+#wrap{position:relative;width:90%;max-width:640px;margin:10px auto}
+video,canvas{width:100%;border-radius:15px;border:2px solid #00ff88}
+.card{background:#1a1a1a;padding:12px 20px;border-radius:12px;border:1px solid #333;display:inline-block;margin:5px}
+.card b{font-size:26px;color:#00ff88;display:block}
+input{padding:12px;border-radius:10px;border:none;width:200px;margin:10px}
+button{padding:12px 25px;background:#00ff88;border:none;border-radius:10px;font-weight:bold;cursor:pointer}
+</style>
+</head>
+<body>
+<h1>AI Real-time GYM Trainer</h1>
+<p>Username daalo, Start dabao, Camera ON karo aur Squat karo!</p>
+<input id="username" placeholder="Enter Username"><br>
+<button onclick="start()">Start Session</button><br>
+<div class="card">SQUAT COUNT<b id="count">0</b></div>
+<div class="card">STAGE<b id="stage">-</b></div>
+<div class="card">USER<b id="user">-</b></div>
+<div id="wrap"><video id="video" playsinline></video><canvas id="canvas"></canvas></div>
+<p id="msg">Camera allow karna padega</p>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+<script>
+let count=0, stage="UP";
+let video=document.getElementById('video');
+let canvas=document.getElementById('canvas');
+let ctx=canvas.getContext('2d');
+function angle(a,b,c){
+let ab={x:a.x-b.x,y:a.y-b.y}, cb={x:c.x-b.x,y:c.y-b.y};
+let dot=ab.x*cb.x+ab.y*cb.y;
+let m1=Math.sqrt(ab.x*ab.x+ab.y*ab.y), m2=Math.sqrt(cb.x*cb.x+cb.y*cb.y);
+return Math.acos(dot/(m1*m2))*180/Math.PI;
+}
+function onResults(res){
+canvas.width=video.videoWidth; canvas.height=video.videoHeight;
+ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.drawImage(res.image,0,0,canvas.width,canvas.height);
+if(res.poseLandmarks){
+let lm=res.poseLandmarks;
+let ang=angle(lm[24],lm[26],lm[28]);
+if(ang<100) stage="DOWN";
+if(ang>160 && stage=="DOWN"){stage="UP";count++;document.getElementById('count').innerText=count;}
+document.getElementById('stage').innerText=stage+" | "+Math.round(ang)+"°";
+}
+}
+let pose=new Pose({locateFile:(f)=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
+pose.setOptions({modelComplexity:1,smoothLandmarks:true,minDetectionConfidence:0.5,minTrackingConfidence:0.5});
+pose.onResults(onResults);
+async function start(){
+let u=document.getElementById('username').value;
+if(!u){alert("Pehle username daalo!");return;}
+document.getElementById('user').innerText=u;
+document.getElementById('msg').innerText="Camera start ho raha hai...";
+let cam=new Camera(video,{onFrame:async()=>{await pose.send({image:video});},width:640,height:480});
+cam.start();
+document.getElementById('msg').innerText="Ab Squat karo! Down - Up = 1 Count";
+}
+</script>
+</body>
+</html>
