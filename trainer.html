@@ -1,140 +1,93 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI GYM TRAINER - Sab Exercise</title>
+<title>AI GYM Trainer - All Exercises</title>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
 <style>
-body{margin:0;background:#000;color:#fff;font-family:Arial;text-align:center}
-h1{color:#00ff88;margin:10px}
-.btns{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;padding:10px}
-button{padding:12px 16px;border:0;border-radius:10px;font-weight:bold;font-size:16px;cursor:pointer;background:#222;color:#fff}
-button.active{background:#00ff88;color:#000}
-#box{position:relative;width:100%;max-width:720px;margin:auto}
-video,canvas{width:100%;border-radius:15px}
-#info{font-size:22px;margin:10px}
-#count{font-size:60px;color:#00ff88;font-weight:bold}
-#feedback{font-size:20px;color:#ffcc00;min-height:30px}
-#back{display:inline-block;margin:15px;background:#fff;color:#000;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:bold}
+body{background:#000;color:#fff;text-align:center;font-family:Arial}
+h1{color:#39ff14}
+button{padding:12px 18px;margin:5px;font-size:16px;border-radius:10px;border:none;cursor:pointer;background:#222;color:#fff}
+button.active{background:#39ff14;color:#000;font-weight:bold}
+#count{font-size:50px;color:#39ff14}
+.box{display:inline-block;background:#111;padding:15px 25px;border-radius:15px;margin:10px}
+video{width:90%;max-width:700px;border:3px solid #39ff14;border-radius:15px;transform:scaleX(-1)}
 </style>
 </head>
 <body>
-<h1>🏋️ AI GYM TRAINER</h1>
-<div class="btns">
+<h1>AI Real-time GYM Trainer</h1>
+<p>Exercise select karo, Start dabao, aur karo!</p>
+
+<div>
 <button onclick="setEx('squat',this)" class="active">Squat</button>
 <button onclick="setEx('pushup',this)">Pushup</button>
 <button onclick="setEx('bicep',this)">Bicep Curl</button>
-<button onclick="setEx('lunge',this)">Lunge</button>
 <button onclick="setEx('shoulder',this)">Shoulder Press</button>
-<button onclick="setEx('jumping',this)">Jumping Jack</button>
+<button onclick="setEx('lunge',this)">Lunge</button>
 </div>
 
-<div id="box">
-<video id="video" autoplay playsinline muted></video>
-<canvas id="canvas"></canvas>
-</div>
+<div class="box"><div id="exName">SQUAT</div><div id="count">0</div></div>
+<div class="box"><div>STAGE</div><div id="stage">-</div></div>
+<br>
+<button onclick="startCam()" style="background:#39ff14;color:#000;font-weight:bold">Start Camera</button>
+<br><br>
+<video id="video" playsinline></video>
 
-<div id="info">Exercise: <b id="exName">Squat</b></div>
-<div id="count">Reps: 0</div>
-<div id="feedback">Camera on karo, khade ho jao...</div>
-<a id="back" href="index.html">⬅ BACK TO HOME</a>
-
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 <script>
-let current='squat', reps=0, stage='up', lastSpeak=0;
+let ex='squat', count=0, stage='-';
 let video=document.getElementById('video');
-let canvas=document.getElementById('canvas');
-let ctx=canvas.getContext('2d');
-let fb=document.getElementById('feedback');
-
-function speak(text){
-  let now=Date.now();
-  if(now-lastSpeak<2500) return;
-  lastSpeak=now;
-  let u=new SpeechSynthesisUtterance(text);
-  u.lang='hi-IN'; u.rate=1.1;
-  window.speechSynthesis.speak(u);
-}
-function setEx(ex,btn){
-  current=ex; reps=0; stage='up';
-  document.getElementById('count').innerText='Reps: 0';
-  document.querySelectorAll('.btns button').forEach(b=>b.classList.remove('active'));
+function setEx(e,btn){
+  ex=e; count=0; stage='-';
+  document.getElementById('count').innerText=0;
+  document.getElementById('exName').innerText=e.toUpperCase();
+  document.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('exName').innerText=ex.toUpperCase();
-  speak(ex + ' shuru karo');
 }
-function angle(a,b,c){
-  let ab={x:a.x-b.x,y:a.y-b.y};
-  let cb={x:c.x-b.x,y:c.y-b.y};
+function getAngle(a,b,c){
+  let ab={x:a.x-b.x,y:a.y-b.y}, cb={x:c.x-b.x,y:c.y-b.y};
   let dot=ab.x*cb.x+ab.y*cb.y;
-  let mag=Math.sqrt(ab.x*ab.x+ab.y*ab.y)*Math.sqrt(cb.x*cb.x+cb.y*cb.y);
-  return Math.acos(dot/mag)*180/Math.PI;
+  let mag1=Math.sqrt(ab.x*ab.x+ab.y*ab.y), mag2=Math.sqrt(cb.x*cb.x+cb.y*cb.y);
+  let ang=Math.acos(dot/(mag1*mag2))*180/Math.PI;
+  return ang;
 }
-function checkForm(lm){
-  if(!lm) return;
-  let leftHip=lm[23], leftKnee=lm[25], leftAnkle=lm[27];
-  let leftShoulder=lm[11], leftElbow=lm[13], leftWrist=lm[15];
-  let rightHip=lm[24], rightKnee=lm[26];
-  let kneeAngle=angle(leftHip,leftKnee,leftAnkle);
-  let elbowAngle=angle(leftShoulder,leftElbow,leftWrist);
+function onResults(res){
+  if(!res.poseLandmarks) return;
+  let lm=res.poseLandmarks;
+  let angle=0;
+  // 11,13,15 = shoulder, elbow, wrist (left) | 23,25,27 = hip, knee, ankle
+  if(ex=='squat') angle=getAngle(lm[23],lm[25],lm[27]);
+  if(ex=='bicep') angle=getAngle(lm[11],lm[13],lm[15]);
+  if(ex=='shoulder') angle=getAngle(lm[23],lm[11],lm[13]); // hip-shoulder-elbow
+  if(ex=='lunge') angle=getAngle(lm[23],lm[25],lm[27]);
+  if(ex=='pushup') angle=getAngle(lm[11],lm[13],lm[15]);
 
-  if(current==='squat'){
-    if(kneeAngle>160 && stage==='down'){stage='up'; reps++; update();}
-    if(kneeAngle<90) stage='down';
-    if(kneeAngle<70){fb.innerText='❌ Bahut neeche mat jao!'; speak('Bahut neeche mat jao');}
-    else if(stage==='down') fb.innerText='✅ Sahi hai, upar aao';
-    else fb.innerText='Squat karo - Ghutna modho';
+  let newStage=stage;
+  if(ex=='squat' || ex=='lunge'){
+    if(angle>160) newStage='UP';
+    if(angle<90 && stage=='UP'){ count++; newStage='DOWN'; }
+    if(angle<90) newStage='DOWN';
   }
-  if(current==='bicep'){
-    if(elbowAngle>150 && stage==='down'){stage='up'; reps++; update();}
-    if(elbowAngle<50) stage='down';
-    if(stage==='down') fb.innerText='✅ Sahi Curl hai';
-    else fb.innerText='Bicep Curl karo - Haath modho';
+  if(ex=='bicep' || ex=='pushup'){
+    if(angle>150) newStage='DOWN';
+    if(angle<60 && stage=='DOWN'){ count++; newStage='UP'; }
+    if(angle<60) newStage='UP';
   }
-  if(current==='pushup'){
-    if(elbowAngle>150 && stage==='down'){stage='up'; reps++; update();}
-    if(elbowAngle<90) stage='down';
-    if(stage==='down') fb.innerText='✅ Sahi Pushup, upar aao';
-    else fb.innerText='Pushup karo - Neeche jao';
+  if(ex=='shoulder'){
+    if(angle<70) newStage='DOWN';
+    if(angle>150 && stage=='DOWN'){ count++; newStage='UP'; }
+    if(angle>150) newStage='UP';
   }
-  if(current==='lunge'){
-    if(kneeAngle>160 && stage==='down'){stage='up'; reps++; update();}
-    if(kneeAngle<95) stage='down';
-    fb.innerText= stage==='down' ? '✅ Sahi Lunge' : 'Lunge karo - Ek pair aage';
-  }
-  if(current==='shoulder'){
-    let shoulderAngle=angle(leftHip,leftShoulder,leftElbow);
-    if(shoulderAngle>150 && stage==='down'){stage='up'; reps++; update();}
-    if(shoulderAngle<80) stage='down';
-    fb.innerText='Shoulder Press - Haath upar uthao';
-  }
-  if(current==='jumping'){
-    let dist=Math.abs(lm[15].x-lm[16].x);
-    if(dist>0.5 && stage==='up'){stage='down'; reps++; update();}
-    if(dist<0.2) stage='up';
-    fb.innerText='Jumping Jack - Haath pair kholo band karo';
-  }
-}
-function update(){
-  document.getElementById('count').innerText='Reps: '+reps;
-  speak('Shabash! ' + reps + ' ho gaye');
+  stage=newStage;
+  document.getElementById('count').innerText=count;
+  document.getElementById('stage').innerText=stage + ' | ' + Math.round(angle)+'°';
 }
 let pose=new Pose({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
-pose.setOptions({modelComplexity:1,smoothLandmarks:true,enableSegmentation:false,minDetectionConfidence:0.5,minTrackingConfidence:0.5});
-pose.onResults(res=>{
-  canvas.width=video.videoWidth; canvas.height=video.videoHeight;
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.drawImage(res.image,0,0,canvas.width,canvas.height);
-  if(res.poseLandmarks){
-    checkForm(res.poseLandmarks);
-    ctx.fillStyle='#00ff88';
-    res.poseLandmarks.forEach(p=>{ctx.beginPath();ctx.arc(p.x*canvas.width,p.y*canvas.height,5,0,2*Math.PI);ctx.fill();});
-  }
-});
-let cam=new Camera(video,{onFrame:async()=>{await pose.send({image:video})},width:720,height:480});
-cam.start();
-speak('Namaste! Trainer ready hai. Squat se shuru karo');
+pose.setOptions({modelComplexity:1,smoothLandmarks:true,minDetectionConfidence:0.5,minTrackingConfidence:0.5});
+pose.onResults(onResults);
+function startCam(){
+  let cam=new Camera(video,{onFrame:async()=>{await pose.send({image:video})},width:640,height:480});
+  cam.start();
+}
 </script>
 </body>
 </html>
