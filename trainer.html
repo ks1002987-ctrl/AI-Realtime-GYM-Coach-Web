@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>AI GYM Trainer - Form Check</title>
+<title>AI GYM Trainer - All Exercise</title>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
 <style>
 body{background:#000;color:#fff;text-align:center;font-family:Arial}
 h1{color:#39ff14}
-button{padding:12px 18px;margin:5px;font-size:16px;border-radius:10px;border:none;cursor:pointer;background:#222;color:#fff}
+button{padding:10px 14px;margin:4px;font-size:15px;border-radius:10px;border:none;cursor:pointer;background:#222;color:#fff}
 button.active{background:#39ff14;color:#000;font-weight:bold}
 #count{font-size:50px;color:#39ff14}
 .box{display:inline-block;background:#111;padding:15px 25px;border-radius:15px;margin:10px}
@@ -19,12 +19,15 @@ video{width:90%;max-width:700px;border:3px solid #39ff14;border-radius:15px;tran
 <body>
 <h1>AI Real-time GYM Trainer</h1>
 <div>
-<button onclick="setEx('squat',this)" class="active">Squat</button>
-<button onclick="setEx('bicep',this)">Bicep Curl</button>
-<button onclick="setEx('shoulder',this)">Shoulder Press</button>
+<button onclick="setEx('squat',this)" class="active">🏋️ Squat</button>
+<button onclick="setEx('bicep',this)">💪 Bicep</button>
+<button onclick="setEx('shoulder',this)">🏋️ Shoulder</button>
+<button onclick="setEx('pushup',this)">🔥 Pushup</button>
+<button onclick="setEx('lunge',this)">🦵 Lunge</button>
+<button onclick="setEx('plank',this)">🧱 Plank</button>
 </div>
 <div class="box"><div id="exName">SQUAT</div><div id="count">0</div></div>
-<div class="box"><div>STAGE</div><div id="stage">-</div></div>
+<div class="box"><div>STAGE / TIME</div><div id="stage">-</div></div>
 <div id="form">Form Check: Ready</div>
 <div id="msg">Camera start karo</div>
 <br>
@@ -32,10 +35,10 @@ video{width:90%;max-width:700px;border:3px solid #39ff14;border-radius:15px;tran
 <br><br>
 <video id="video" playsinline></video>
 <script>
-let ex='squat', count=0, stage='-';
+let ex='squat', count=0, stage='-', plankTime=0;
 let video=document.getElementById('video');
 function setEx(e,btn){
-  ex=e; count=0; stage='-';
+  ex=e; count=0; stage='-'; plankTime=0;
   document.getElementById('count').innerText=0;
   document.getElementById('exName').innerText=e.toUpperCase();
   document.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
@@ -50,31 +53,44 @@ function getAngle(a,b,c){
 function onResults(res){
   if(!res.poseLandmarks){ document.getElementById('msg').innerText='Body nahi dikh rahi! Peeche hato'; return; }
   let lm=res.poseLandmarks;
-  let angle=0, backAngle=0, formMsg="Sahi hai! Shabaash! ✅";
-  let formColor="#39ff14";
-  if(ex=='squat') angle=getAngle(lm[23],lm[25],lm[27]);
+  let angle=0, backAngle=getAngle(lm[11],lm[23],lm[25]), formMsg="Sahi hai! Shabaash! ✅", formColor="#39ff14";
+  if(ex=='squat' || ex=='lunge') angle=getAngle(lm[23],lm[25],lm[27]);
   if(ex=='bicep' || ex=='shoulder') angle=getAngle(lm[11],lm[13],lm[15]);
-  backAngle=getAngle(lm[11],lm[23],lm[25]);
+  if(ex=='pushup') angle=getAngle(lm[11],lm[13],lm[15]);
+  if(ex=='plank') angle=getAngle(lm[11],lm[23],lm[25]);
+
   if(ex=='squat'){
-    if(angle>110 && angle<150){ formMsg="⚠️ AUR NEECHE JAO! Ghutna aur modo"; formColor="#ff4444"; }
-    else if(backAngle<140){ formMsg="⚠️ PEETH SEEDHI RAKHO! Jhuk mat"; formColor="#ff4444"; }
-    else if(angle<110){ formMsg="Sahi hai! Ab upar aao ✅"; formColor="#39ff14"; }
+    if(angle>110 && angle<150){ formMsg="⚠️ AUR NEECHE JAO!"; formColor="#ff4444"; }
+    else if(backAngle<140){ formMsg="⚠️ PEETH SEEDHI RAKHO!"; formColor="#ff4444"; }
+    else if(angle<110){ formMsg="Sahi hai! Ab upar aao ✅"; }
+  }
+  if(ex=='lunge'){
+    if(angle>120 && angle<150){ formMsg="⚠️ AUR NEECHE JAO!"; formColor="#ff4444"; }
+    else if(angle<110){ formMsg="Sahi hai! Lunge perfect ✅"; }
   }
   if(ex=='bicep'){
-    if(angle>140){ formMsg="Haath neeche hai, ab modo ✅"; formColor="#39ff14"; }
-    else if(angle>70 && angle<140){ formMsg="⚠️ AUR UPAR MOD-O! Pura curl karo"; formColor="#ff4444"; }
-    else if(angle<70){ formMsg="Sahi hai! Ab neeche le jao ✅"; formColor="#39ff14"; }
+    if(angle>70 && angle<140){ formMsg="⚠️ AUR UPAR MOD-O!"; formColor="#ff4444"; }
+    else if(angle<70){ formMsg="Sahi hai! Ab neeche le jao ✅"; }
   }
   if(ex=='shoulder'){
-    if(angle<110){ formMsg="Haath neeche hai, ab upar dhakelo"; formColor="yellow"; }
-    else if(angle>110 && angle<150){ formMsg="⚠️ HAATH PURA SEEDHA KARO! Aadha mat chhodo"; formColor="#ff4444"; }
-    else if(angle>150){ formMsg="Sahi hai! Ekdum seedha ✅"; formColor="#39ff14"; }
+    if(angle>110 && angle<150){ formMsg="⚠️ HAATH PURA SEEDHA KARO!"; formColor="#ff4444"; }
+    else if(angle>150){ formMsg="Sahi hai! Ekdum seedha ✅"; }
   }
+  if(ex=='pushup'){
+    if(angle>100 && angle<150){ formMsg="⚠️ AUR NEECHE JAO!"; formColor="#ff4444"; }
+    else if(angle<90){ formMsg="Sahi hai! Ab upar aao ✅"; }
+  }
+  if(ex=='plank'){
+    if(angle<150){ formMsg="⚠️ KAMAR SEEDHI RAKHO! Neeche mat jhuko"; formColor="#ff4444"; plankTime=0; }
+    else { formMsg="Plank Sahi hai! Ruke raho ✅"; plankTime++; }
+  }
+
   document.getElementById('form').innerText=formMsg;
   document.getElementById('form').style.color=formColor;
   document.getElementById('msg').innerText='Angle: '+Math.round(angle)+'°';
+
   let newStage=stage;
-  if(ex=='squat'){
+  if(ex=='squat' || ex=='lunge'){
     if(angle>150) newStage='UP';
     if(angle<110 && stage=='UP'){ count++; newStage='DOWN'; }
     else if(angle<110) newStage='DOWN';
@@ -89,9 +105,18 @@ function onResults(res){
     if(angle>150 && stage=='DOWN'){ count++; newStage='UP'; }
     else if(angle>150) newStage='UP';
   }
+  if(ex=='pushup'){
+    if(angle>150) newStage='UP';
+    if(angle<90 && stage=='UP'){ count++; newStage='DOWN'; }
+    else if(angle<90) newStage='DOWN';
+  }
+  if(ex=='plank'){
+    count = Math.floor(plankTime/30);
+    newStage = count + ' sec';
+  }
   stage=newStage;
-  document.getElementById('count').innerText=count;
-  document.getElementById('stage').innerText=stage + ' | ' + Math.round(angle)+'°';
+  document.getElementById('count').innerText = ex=='plank' ? count+' sec' : count;
+  document.getElementById('stage').innerText = stage + ' | ' + Math.round(angle)+'°';
 }
 let pose=new Pose({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}`});
 pose.setOptions({modelComplexity:1,smoothLandmarks:true,minDetectionConfidence:0.5,minTrackingConfidence:0.5});
@@ -103,3 +128,4 @@ function startCam(){
 </script>
 </body>
 </html>
+
