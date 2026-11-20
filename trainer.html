@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>AI GYM Trainer - All Exercises</title>
+<title>AI GYM Trainer - Form Check</title>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
 <style>
@@ -12,27 +12,25 @@ button.active{background:#39ff14;color:#000;font-weight:bold}
 #count{font-size:50px;color:#39ff14}
 .box{display:inline-block;background:#111;padding:15px 25px;border-radius:15px;margin:10px}
 video{width:90%;max-width:700px;border:3px solid #39ff14;border-radius:15px;transform:scaleX(-1)}
+#msg{color:yellow;font-size:20px;font-weight:bold}
+#form{color:#ff4444;font-size:22px;font-weight:bold;margin:10px}
 </style>
 </head>
 <body>
 <h1>AI Real-time GYM Trainer</h1>
-<p>Exercise select karo, Start dabao, aur karo!</p>
-
 <div>
 <button onclick="setEx('squat',this)" class="active">Squat</button>
-<button onclick="setEx('pushup',this)">Pushup</button>
 <button onclick="setEx('bicep',this)">Bicep Curl</button>
 <button onclick="setEx('shoulder',this)">Shoulder Press</button>
-<button onclick="setEx('lunge',this)">Lunge</button>
 </div>
-
 <div class="box"><div id="exName">SQUAT</div><div id="count">0</div></div>
 <div class="box"><div>STAGE</div><div id="stage">-</div></div>
+<div id="form">Form Check: Ready</div>
+<div id="msg">Camera start karo</div>
 <br>
 <button onclick="startCam()" style="background:#39ff14;color:#000;font-weight:bold">Start Camera</button>
 <br><br>
 <video id="video" playsinline></video>
-
 <script>
 let ex='squat', count=0, stage='-';
 let video=document.getElementById('video');
@@ -47,35 +45,49 @@ function getAngle(a,b,c){
   let ab={x:a.x-b.x,y:a.y-b.y}, cb={x:c.x-b.x,y:c.y-b.y};
   let dot=ab.x*cb.x+ab.y*cb.y;
   let mag1=Math.sqrt(ab.x*ab.x+ab.y*ab.y), mag2=Math.sqrt(cb.x*cb.x+cb.y*cb.y);
-  let ang=Math.acos(dot/(mag1*mag2))*180/Math.PI;
-  return ang;
+  return Math.acos(dot/(mag1*mag2))*180/Math.PI;
 }
 function onResults(res){
-  if(!res.poseLandmarks) return;
+  if(!res.poseLandmarks){ document.getElementById('msg').innerText='Body nahi dikh rahi! Peeche hato'; return; }
   let lm=res.poseLandmarks;
-  let angle=0;
-  // 11,13,15 = shoulder, elbow, wrist (left) | 23,25,27 = hip, knee, ankle
+  let angle=0, backAngle=0, formMsg="Sahi hai! Shabaash! ✅";
+  let formColor="#39ff14";
   if(ex=='squat') angle=getAngle(lm[23],lm[25],lm[27]);
-  if(ex=='bicep') angle=getAngle(lm[11],lm[13],lm[15]);
-  if(ex=='shoulder') angle=getAngle(lm[23],lm[11],lm[13]); // hip-shoulder-elbow
-  if(ex=='lunge') angle=getAngle(lm[23],lm[25],lm[27]);
-  if(ex=='pushup') angle=getAngle(lm[11],lm[13],lm[15]);
-
-  let newStage=stage;
-  if(ex=='squat' || ex=='lunge'){
-    if(angle>160) newStage='UP';
-    if(angle<90 && stage=='UP'){ count++; newStage='DOWN'; }
-    if(angle<90) newStage='DOWN';
+  if(ex=='bicep' || ex=='shoulder') angle=getAngle(lm[11],lm[13],lm[15]);
+  backAngle=getAngle(lm[11],lm[23],lm[25]);
+  if(ex=='squat'){
+    if(angle>110 && angle<150){ formMsg="⚠️ AUR NEECHE JAO! Ghutna aur modo"; formColor="#ff4444"; }
+    else if(backAngle<140){ formMsg="⚠️ PEETH SEEDHI RAKHO! Jhuk mat"; formColor="#ff4444"; }
+    else if(angle<110){ formMsg="Sahi hai! Ab upar aao ✅"; formColor="#39ff14"; }
   }
-  if(ex=='bicep' || ex=='pushup'){
-    if(angle>150) newStage='DOWN';
-    if(angle<60 && stage=='DOWN'){ count++; newStage='UP'; }
-    if(angle<60) newStage='UP';
+  if(ex=='bicep'){
+    if(angle>140){ formMsg="Haath neeche hai, ab modo ✅"; formColor="#39ff14"; }
+    else if(angle>70 && angle<140){ formMsg="⚠️ AUR UPAR MOD-O! Pura curl karo"; formColor="#ff4444"; }
+    else if(angle<70){ formMsg="Sahi hai! Ab neeche le jao ✅"; formColor="#39ff14"; }
   }
   if(ex=='shoulder'){
-    if(angle<70) newStage='DOWN';
-    if(angle>150 && stage=='DOWN'){ count++; newStage='UP'; }
+    if(angle<110){ formMsg="Haath neeche hai, ab upar dhakelo"; formColor="yellow"; }
+    else if(angle>110 && angle<150){ formMsg="⚠️ HAATH PURA SEEDHA KARO! Aadha mat chhodo"; formColor="#ff4444"; }
+    else if(angle>150){ formMsg="Sahi hai! Ekdum seedha ✅"; formColor="#39ff14"; }
+  }
+  document.getElementById('form').innerText=formMsg;
+  document.getElementById('form').style.color=formColor;
+  document.getElementById('msg').innerText='Angle: '+Math.round(angle)+'°';
+  let newStage=stage;
+  if(ex=='squat'){
     if(angle>150) newStage='UP';
+    if(angle<110 && stage=='UP'){ count++; newStage='DOWN'; }
+    else if(angle<110) newStage='DOWN';
+  }
+  if(ex=='bicep'){
+    if(angle>140) newStage='DOWN';
+    if(angle<70 && stage=='DOWN'){ count++; newStage='UP'; }
+    else if(angle<70) newStage='UP';
+  }
+  if(ex=='shoulder'){
+    if(angle<110) newStage='DOWN';
+    if(angle>150 && stage=='DOWN'){ count++; newStage='UP'; }
+    else if(angle>150) newStage='UP';
   }
   stage=newStage;
   document.getElementById('count').innerText=count;
